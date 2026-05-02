@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AnimeHub</string>
+    <string name="home">首页</string>
+    <string name="search">搜索</string>
+    <string name="sources">源管理</string>
+    <string name="settings">设置</string>
+    <string name="favorites">收藏</string>
+    <string name="recent_watch">最近观看</string>
+    <string name="no_recent_watch">还没有观看记录</string>
+    <string name="no_favorites">还没有收藏</string>
+    <string name="no_results">没有找到结果</string>
+    <string name="enabled_sources">已启用源</string>
+    <string name="add_source">添加源</string>
+    <string name="legal_disclaimer">仅支持合法授权内容和用户自有媒体</string>
+    <string name="player_error">播放出错</string>
+    <string name="delete_source_confirm">确定要删除这个源吗？</string>
+</resources>
