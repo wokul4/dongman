@@ -52,11 +52,11 @@ fun PlayerScreen(
         viewModel.load(episodeId, animeId, sourceId)
     }
 
-    var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
     // Poll playback position every 2 seconds during playback
-    LaunchedEffect(player) {
-        val p = player ?: return@LaunchedEffect
+    LaunchedEffect(exoPlayer) {
+        val p = exoPlayer ?: return@LaunchedEffect
         while (true) {
             delay(2000)
             val pos = p.currentPosition
@@ -70,16 +70,16 @@ fun PlayerScreen(
     // Back press saves progress
     BackHandler {
         viewModel.saveCurrentProgress()
-        player?.stop()
-        player?.release()
+        exoPlayer?.stop()
+        exoPlayer?.release()
         onBack()
     }
 
     DisposableEffect(Unit) {
         onDispose {
             viewModel.saveCurrentProgress()
-            player?.stop()
-            player?.release()
+            exoPlayer?.stop()
+            exoPlayer?.release()
         }
     }
 
@@ -102,15 +102,15 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
                         PlayerView(ctx).apply {
-                            player = ExoPlayer.Builder(ctx).build().also { exo ->
+                            val exo = ExoPlayer.Builder(ctx).build().apply {
                                 val mediaItem = MediaItem.fromUri(Uri.parse(media.uri))
-                                exo.setMediaItem(mediaItem)
+                                setMediaItem(mediaItem)
                                 if (initialProgress > 0L) {
-                                    exo.seekTo(initialProgress)
+                                    seekTo(initialProgress)
                                 }
-                                exo.prepare()
-                                exo.playWhenReady = true
-                                exo.addListener(object : Player.Listener {
+                                prepare()
+                                playWhenReady = true
+                                addListener(object : Player.Listener {
                                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                                         if (isPlaying) viewModel.startAutoSave()
                                     }
@@ -126,6 +126,8 @@ fun PlayerScreen(
                                     }
                                 })
                             }
+                            exoPlayer = exo
+                            this.player = exo
                             useController = true
                             setShowNextButton(false)
                             setShowPreviousButton(false)
