@@ -57,10 +57,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 )
             } catch (e: Exception) {
                 _uiState.value = PlayerUiState.Error(
-                    e.message ?: "加载播放地址失败"
+                    e.message ?: "无法加载播放地址，请检查视频文件是否存在"
                 )
             }
         }
+    }
+
+    fun onPlayerError(errorMsg: String) {
+        _uiState.value = PlayerUiState.Error(errorMsg)
     }
 
     fun onProgressChanged(progressMs: Long, durationMs: Long) {
