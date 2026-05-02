@@ -6,10 +6,13 @@ import com.animehub.data.local.dao.EpisodeDao
 import com.animehub.data.local.dao.SourceDao
 import com.animehub.data.local.entity.SourceEntity
 import com.animehub.data.source.local.LocalFileSource
+import com.animehub.data.source.webdav.WebDavConfig
+import com.animehub.data.source.webdav.WebDavSource
 import com.animehub.domain.model.AnimeSummary
 import com.animehub.domain.model.PageResult
 import com.animehub.domain.source.AnimeSource
 import com.animehub.domain.source.SourceType
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -81,10 +84,28 @@ class SourceManager(
         return sources["local_file"] as? LocalFileSource
     }
 
+    fun getWebDavSource(id: String): WebDavSource? {
+        return sources[id] as? WebDavSource
+    }
+
+    fun getOrCreateWebDavSource(id: String, config: WebDavConfig): WebDavSource {
+        val existing = sources[id] as? WebDavSource
+        if (existing != null) return existing
+        val source = WebDavSource(id, config.displayName, config, animeDao, episodeDao)
+        sources[id] = source
+        return source
+    }
+
     private fun getOrCreateSource(entity: SourceEntity): AnimeSource? {
         if (sources.containsKey(entity.id)) return sources[entity.id]
         val source = when (entity.type) {
             SourceType.LOCAL_FILE.name -> LocalFileSource(context, animeDao, episodeDao)
+            SourceType.WEBDAV.name -> {
+                try {
+                    val config = Json.decodeFromString<WebDavConfig>(entity.configJson)
+                    WebDavSource(entity.id, config.displayName, config, animeDao, episodeDao)
+                } catch (_: Exception) { null }
+            }
             else -> null
         }
         if (source != null) sources[entity.id] = source

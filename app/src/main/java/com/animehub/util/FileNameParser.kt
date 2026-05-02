@@ -6,6 +6,8 @@ object FileNameParser {
         Regex("""[第]?(\d+)[集話话話]"""),
         Regex("""[Ss](\d+)[Ee](\d+)"""),
         Regex("""[Ee]p(?:isode)?[\s.]*(\d+)"""),
+        Regex("""\[(\d+)]"""),
+        Regex("""[Ee](\d+)"""),
         Regex("""(\d+)\s*[-–—]\s*\d+"""),
         Regex("""^\d+""")
     )

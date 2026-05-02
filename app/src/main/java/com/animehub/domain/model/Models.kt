@@ -28,6 +28,7 @@ data class Episode(
 
 data class PlayableMedia(
     val uri: String,
+    val headers: Map<String, String> = emptyMap(),
     val subtitles: List<SubtitleTrack> = emptyList()
 )
 

@@ -10,6 +10,7 @@ import com.animehub.data.local.entity.AnimeEntity
 import com.animehub.data.local.entity.EpisodeEntity
 import com.animehub.util.FileNameParser
 import com.animehub.util.VideoFileDetector
+import com.animehub.util.VideoMetadataReader
 
 class LocalImportManager(
     private val context: Context,
@@ -40,13 +41,14 @@ class LocalImportManager(
             description = null,
             updatedAt = now
         )
+        val durationMs = VideoMetadataReader.readDurationMs(context, uri)
         val episodeEntity = EpisodeEntity(
             id = uri.toString(),
             animeId = animeId,
             sourceId = "local_file",
             title = info.displayName,
             episodeNumber = episodeNum ?: 1f,
-            durationMs = null,
+            durationMs = durationMs,
             playableUrl = uri.toString()
         )
 
@@ -83,13 +85,14 @@ class LocalImportManager(
         val sorted = resolved.sortedBy { (_, info) -> info.displayName }
         val episodeEntities = sorted.mapIndexed { index, (uri, info) ->
             val episodeNum = FileNameParser.parseEpisodeNumber(info.displayName) ?: (index + 1).toFloat()
+            val durationMs = VideoMetadataReader.readDurationMs(context, uri)
             EpisodeEntity(
                 id = uri.toString(),
                 animeId = groupName,
                 sourceId = "local_file",
                 title = info.displayName,
                 episodeNumber = episodeNum,
-                durationMs = null,
+                durationMs = durationMs,
                 playableUrl = uri.toString()
             )
         }
@@ -149,13 +152,14 @@ class LocalImportManager(
         val sorted = videoUris.sortedBy { (_, name) -> name }
         val episodeEntities = sorted.mapIndexed { index, (uri, name) ->
             val episodeNum = FileNameParser.parseEpisodeNumber(name) ?: (index + 1).toFloat()
+            val durationMs = VideoMetadataReader.readDurationMs(context, uri)
             EpisodeEntity(
                 id = uri.toString(),
                 animeId = animeId,
                 sourceId = "local_file",
                 title = name,
                 episodeNumber = episodeNum,
-                durationMs = null,
+                durationMs = durationMs,
                 playableUrl = uri.toString()
             )
         }

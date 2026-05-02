@@ -10,8 +10,14 @@ import com.animehub.domain.model.WatchHistory
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+data class RecentWatchItem(
+    val history: WatchHistory,
+    val episodeTitle: String?,
+    val animeTitle: String?
+)
+
 data class HomeUiState(
-    val recentHistory: List<WatchHistory> = emptyList(),
+    val recentHistory: List<RecentWatchItem> = emptyList(),
     val favorites: List<AnimeSummary> = emptyList(),
     val enabledSources: List<SourceConfig> = emptyList(),
     val isLoading: Boolean = true
@@ -26,7 +32,20 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             app.watchHistoryRepository.getRecentHistory().collect { history ->
-                _uiState.update { it.copy(recentHistory = history) }
+                val enriched = history.map { h ->
+                    val episode = try {
+                        app.database.episodeDao().getById(h.episodeId, h.animeId, h.sourceId)
+                    } catch (_: Exception) { null }
+                    val anime = try {
+                        app.database.animeDao().getById(h.animeId, h.sourceId)
+                    } catch (_: Exception) { null }
+                    RecentWatchItem(
+                        history = h,
+                        episodeTitle = episode?.title,
+                        animeTitle = anime?.title
+                    )
+                }
+                _uiState.update { it.copy(recentHistory = enriched) }
             }
         }
         viewModelScope.launch {

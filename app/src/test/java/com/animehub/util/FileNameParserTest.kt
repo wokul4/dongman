@@ -50,6 +50,24 @@ class FileNameParserTest {
     }
 
     @Test
+    fun `bracket format extracts episode number`() {
+        assertEquals(1f, FileNameParser.parseEpisodeNumber("[01].mp4"))
+        assertEquals(12f, FileNameParser.parseEpisodeNumber("[12] title.mkv"))
+    }
+
+    @Test
+    fun `E prefix format`() {
+        assertEquals(5f, FileNameParser.parseEpisodeNumber("E05.mp4"))
+        assertEquals(3f, FileNameParser.parseEpisodeNumber("E03 title.mkv"))
+    }
+
+    @Test
+    fun `number dash title format`() {
+        assertEquals(12f, FileNameParser.parseEpisodeNumber("12 - title.mkv"))
+        assertEquals(7f, FileNameParser.parseEpisodeNumber("07 - episode.mkv"))
+    }
+
+    @Test
     fun `empty and edge cases`() {
         assertNull(FileNameParser.parseEpisodeNumber(""))
         assertNull(FileNameParser.parseEpisodeNumber("."))

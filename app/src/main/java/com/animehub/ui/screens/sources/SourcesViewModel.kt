@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.animehub.AnimeHubApplication
 import com.animehub.data.local.entity.SourceEntity
+import com.animehub.data.source.webdav.WebDavClient
+import com.animehub.data.source.webdav.WebDavConfig
 import com.animehub.domain.model.SourceConfig
 import com.animehub.domain.source.SourceType
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 data class SourcesUiState(
     val sources: List<SourceConfig> = emptyList(),
@@ -41,7 +45,51 @@ class SourcesViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteSource(id: String) {
         viewModelScope.launch {
-            app.sourceRepository.deleteSource(id)
+            app.sourceManager.removeSource(id)
+        }
+    }
+
+    fun testWebDavConnection(url: String, username: String, password: String, rootPath: String): String {
+        val config = WebDavConfig(
+            baseUrl = url.trimEnd('/'),
+            username = username.ifBlank { null },
+            password = password.ifBlank { null },
+            displayName = "test",
+            rootPath = rootPath.ifBlank { "/" }
+        )
+        val client = WebDavClient(config)
+        return when (val result = client.testConnection()) {
+            is WebDavClient.WebDavResult.Success -> "连接成功"
+            is WebDavClient.WebDavResult.Error -> "连接失败: ${result.message}"
+        }
+    }
+
+    fun saveWebDavSource(name: String, url: String, username: String, password: String, rootPath: String) {
+        viewModelScope.launch {
+            try {
+                val config = WebDavConfig(
+                    baseUrl = url.trimEnd('/'),
+                    username = username.ifBlank { null },
+                    password = password.ifBlank { null },
+                    displayName = name,
+                    rootPath = rootPath.ifBlank { "/" }
+                )
+                val sourceId = "webdav_${System.currentTimeMillis()}"
+                val configJson = Json.encodeToString(config)
+                app.sourceManager.addSource(
+                    SourceEntity(
+                        id = sourceId,
+                        name = name,
+                        type = SourceType.WEBDAV.name,
+                        configJson = configJson,
+                        enabled = true,
+                        createdAt = System.currentTimeMillis()
+                    )
+                )
+                _uiState.update { it.copy(importResult = "WebDAV 源添加成功") }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(importResult = "保存失败: ${e.message}") }
+            }
         }
     }
 
@@ -71,10 +119,8 @@ class SourcesViewModel(application: Application) : AndroidViewModel(application)
                     _uiState.update { it.copy(importResult = "本地源不可用") }
                     return@launch
                 }
-                val result = localSource.importManager.importSingleVideo(uri)
-                _uiState.update {
-                    it.copy(importResult = "成功导入 ${result.episodeCount} 个视频")
-                }
+                localSource.importManager.importSingleVideo(uri)
+                _uiState.update { it.copy(importResult = "成功导入 1 个视频") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(importResult = "导入失败: ${e.message}") }
             }
@@ -90,8 +136,7 @@ class SourcesViewModel(application: Application) : AndroidViewModel(application)
                     return@launch
                 }
                 val result = localSource.importManager.importFromTreeUri(treeUri, animeTitle)
-                val msg = "成功导入 ${result.animeCount} 个番剧，${result.episodeCount} 个剧集"
-                _uiState.update { it.copy(importResult = msg) }
+                _uiState.update { it.copy(importResult = "成功导入 ${result.episodeCount} 个剧集") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(importResult = "导入失败: ${e.message}") }
             }

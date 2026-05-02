@@ -18,7 +18,7 @@ sealed class PlayerUiState {
     data class Error(val message: String) : PlayerUiState()
 }
 
-data class PlayableMediaState(val uri: String)
+data class PlayableMediaState(val uri: String, val headers: Map<String, String> = emptyMap())
 data class PlaybackState(
     val episodeId: String = "",
     val animeId: String = "",
@@ -52,7 +52,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
                 val progress = app.watchHistoryRepository.getProgress(episodeId, animeId, sourceId)
                 _uiState.value = PlayerUiState.Ready(
-                    media = PlayableMediaState(playable.uri),
+                    media = PlayableMediaState(uri = playable.uri, headers = playable.headers),
                     initialProgressMs = progress?.progressMs ?: 0L
                 )
             } catch (e: Exception) {

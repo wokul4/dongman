@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,9 +28,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("AnimeHub") })
-        }
+        topBar = { TopAppBar(title = { Text("AnimeHub") }) }
     ) { padding ->
         if (uiState.isLoading) {
             LoadingState(modifier = Modifier.padding(padding))
@@ -37,55 +36,39 @@ fun HomeScreen(
         }
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Recent Watch Section
             item {
-                Text(
-                    text = "最近观看",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Text("最近观看", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
             }
             if (uiState.recentHistory.isEmpty()) {
                 item {
-                    Text(
-                        text = "还没有观看记录",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Text("还没有观看记录", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                items(uiState.recentHistory.take(5)) { history ->
-                    AnimeCard(
-                        title = "剧集 ${history.episodeId.take(20)}...",
-                        subtitle = formatTime(history.progressMs),
-                        onClick = { onNavigateToPlayer(history.episodeId, history.animeId, history.sourceId) }
+                items(uiState.recentHistory.take(10)) { item ->
+                    val h = item.history
+                    RecentWatchCard(
+                        episodeTitle = item.episodeTitle ?: "未知剧集",
+                        animeTitle = item.animeTitle,
+                        progressMs = h.progressMs,
+                        durationMs = h.durationMs,
+                        onClick = { onNavigateToPlayer(h.episodeId, h.animeId, h.sourceId) }
                     )
                 }
             }
 
             // Favorites Section
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "收藏",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Spacer(Modifier.height(16.dp))
+                Text("收藏", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
             }
             if (uiState.favorites.isEmpty()) {
                 item {
-                    EmptyState(
-                        message = "还没有收藏",
-                        icon = Icons.AutoMirrored.Filled.LibraryBooks,
-                        modifier = Modifier.height(120.dp)
-                    )
+                    EmptyState(message = "还没有收藏", icon = Icons.AutoMirrored.Filled.LibraryBooks, modifier = Modifier.height(120.dp))
                 }
             } else {
                 items(uiState.favorites) { anime ->
@@ -100,18 +83,53 @@ fun HomeScreen(
 
             // Enabled Sources Section
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "已启用源 (${uiState.enabledSources.size})",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Spacer(Modifier.height(16.dp))
+                Text("已启用源 (${uiState.enabledSources.size})", style = MaterialTheme.typography.titleLarge)
             }
             items(uiState.enabledSources) { source ->
+                Text("${source.name} (${source.type})", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentWatchCard(
+    episodeTitle: String,
+    animeTitle: String?,
+    progressMs: Long,
+    durationMs: Long,
+    onClick: () -> Unit
+) {
+    val progress = if (durationMs > 0L) (progressMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.History, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(episodeTitle, style = MaterialTheme.typography.titleSmall)
+                    if (animeTitle != null) {
+                        Text(animeTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (durationMs > 0L) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp),
+                )
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${source.name} (${source.type})",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    "${formatTime(progressMs)} / ${formatTime(durationMs)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -119,12 +137,10 @@ fun HomeScreen(
 }
 
 private fun formatTime(ms: Long): String {
-    val seconds = ms / 1000
-    val minutes = seconds / 60
-    val hours = minutes / 60
-    return when {
-        hours > 0 -> "${hours}时${minutes % 60}分"
-        minutes > 0 -> "${minutes}分${seconds % 60}秒"
-        else -> "${seconds}秒"
-    }
+    val totalSec = ms / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}"
+    else "${m}:${s.toString().padStart(2, '0')}"
 }

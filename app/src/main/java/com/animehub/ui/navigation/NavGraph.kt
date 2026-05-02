@@ -26,6 +26,7 @@ import com.animehub.ui.screens.player.PlayerScreen
 import com.animehub.ui.screens.search.SearchScreen
 import com.animehub.ui.screens.settings.SettingsScreen
 import com.animehub.ui.screens.sources.SourcesScreen
+import com.animehub.ui.screens.sources.WebDavBrowserScreen
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     data object Home : Screen("home", "首页", Icons.Filled.Home)
@@ -39,6 +40,7 @@ val bottomNavItems = listOf(Screen.Home, Screen.Search, Screen.Sources, Screen.S
 object DetailNav {
     const val DETAIL = "detail/{animeId}/{sourceId}"
     const val PLAYER = "player/{episodeId}/{animeId}/{sourceId}"
+    const val WEBDAV_BROWSER = "webdav_browser/{sourceId}"
 
     fun detailRoute(animeId: String, sourceId: String): String {
         return "detail/${Uri.encode(animeId)}/${Uri.encode(sourceId)}"
@@ -46,6 +48,10 @@ object DetailNav {
 
     fun playerRoute(episodeId: String, animeId: String, sourceId: String): String {
         return "player/${Uri.encode(episodeId)}/${Uri.encode(animeId)}/${Uri.encode(sourceId)}"
+    }
+
+    fun webdavBrowserRoute(sourceId: String): String {
+        return "webdav_browser/${Uri.encode(sourceId)}"
     }
 }
 
@@ -107,7 +113,27 @@ fun AnimeHubNavGraph() {
             }
 
             composable(Screen.Sources.route) {
-                SourcesScreen()
+                SourcesScreen(
+                    onNavigateToBrowser = { sourceId ->
+                        navController.navigate(DetailNav.webdavBrowserRoute(sourceId))
+                    }
+                )
+            }
+
+            composable(
+                route = DetailNav.WEBDAV_BROWSER,
+                arguments = listOf(
+                    navArgument("sourceId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val sourceId = Uri.decode(backStackEntry.arguments?.getString("sourceId") ?: return@composable)
+                WebDavBrowserScreen(
+                    sourceId = sourceId,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPlayer = { episodeId, animeId, srcId ->
+                        navController.navigate(DetailNav.playerRoute(episodeId, animeId, srcId))
+                    }
+                )
             }
 
             composable(Screen.Settings.route) {
