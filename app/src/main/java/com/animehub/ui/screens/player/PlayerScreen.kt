@@ -115,12 +115,14 @@ fun PlayerScreen(
                                         if (isPlaying) viewModel.startAutoSave()
                                     }
                                     override fun onPlayerError(error: PlaybackException) {
-                                        val msg = when {
-                                            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "网络连接失败"
-                                            error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "视频文件未找到"
-                                            error.errorCode == PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> "无权限访问视频文件"
-                                            error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED -> "视频解码失败，格式可能不支持"
-                                            else -> "播放出错: ${error.localizedMessage ?: "未知错误"}"
+                                        val msg = when (error.errorCode) {
+                                            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED -> "网络连接失败"
+                                            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "视频文件未找到"
+                                            PlaybackException.ERROR_CODE_IO_NO_PERMISSION -> "无权限访问视频文件"
+                                            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "服务器返回错误状态"
+                                            PlaybackException.ERROR_CODE_DECODING_FAILED -> "视频解码失败，格式可能不支持"
+                                            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED -> "视频文件格式损坏"
+                                            else -> "播放出错: ${error.localizedMessage ?: "未知错误"} (错误码: ${error.errorCode})"
                                         }
                                         viewModel.onPlayerError(msg)
                                     }

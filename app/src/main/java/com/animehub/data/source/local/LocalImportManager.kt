@@ -30,6 +30,7 @@ class LocalImportManager(
         val animeId = info.displayName.substringBeforeLast(".")
         val now = System.currentTimeMillis()
 
+        val localUri = copyToPrivateStorage(uri, info.displayName)
         val episodeNum = FileNameParser.parseEpisodeNumber(info.displayName)
         val animeTitle = FileNameParser.extractTitle(info.displayName)
 
@@ -41,15 +42,15 @@ class LocalImportManager(
             description = null,
             updatedAt = now
         )
-        val durationMs = VideoMetadataReader.readDurationMs(context, uri)
+        val durationMs = VideoMetadataReader.readDurationMs(context, localUri)
         val episodeEntity = EpisodeEntity(
-            id = uri.toString(),
+            id = localUri.toString(),
             animeId = animeId,
             sourceId = "local_file",
             title = info.displayName,
             episodeNumber = episodeNum ?: 1f,
             durationMs = durationMs,
-            playableUrl = uri.toString()
+            playableUrl = localUri.toString()
         )
 
         animeDao.insertAll(listOf(animeEntity))
@@ -84,16 +85,17 @@ class LocalImportManager(
 
         val sorted = resolved.sortedBy { (_, info) -> info.displayName }
         val episodeEntities = sorted.mapIndexed { index, (uri, info) ->
+            val localUri = copyToPrivateStorage(uri, info.displayName)
             val episodeNum = FileNameParser.parseEpisodeNumber(info.displayName) ?: (index + 1).toFloat()
-            val durationMs = VideoMetadataReader.readDurationMs(context, uri)
+            val durationMs = VideoMetadataReader.readDurationMs(context, localUri)
             EpisodeEntity(
-                id = uri.toString(),
+                id = localUri.toString(),
                 animeId = groupName,
                 sourceId = "local_file",
                 title = info.displayName,
                 episodeNumber = episodeNum,
                 durationMs = durationMs,
-                playableUrl = uri.toString()
+                playableUrl = localUri.toString()
             )
         }
 
@@ -151,16 +153,17 @@ class LocalImportManager(
 
         val sorted = videoUris.sortedBy { (_, name) -> name }
         val episodeEntities = sorted.mapIndexed { index, (uri, name) ->
+            val localUri = copyToPrivateStorage(uri, name)
             val episodeNum = FileNameParser.parseEpisodeNumber(name) ?: (index + 1).toFloat()
-            val durationMs = VideoMetadataReader.readDurationMs(context, uri)
+            val durationMs = VideoMetadataReader.readDurationMs(context, localUri)
             EpisodeEntity(
-                id = uri.toString(),
+                id = localUri.toString(),
                 animeId = animeId,
                 sourceId = "local_file",
                 title = name,
                 episodeNumber = episodeNum,
                 durationMs = durationMs,
-                playableUrl = uri.toString()
+                playableUrl = localUri.toString()
             )
         }
 
@@ -183,6 +186,29 @@ class LocalImportManager(
             }
         } catch (e: Exception) {
             UriInfo(uri.lastPathSegment ?: "Unknown", uri, null, 0L)
+        }
+    }
+
+    /**
+     * Copy content:// URI to app-private directory for reliable access.
+     * Returns the local file URI, or the original URI if copying fails.
+     */
+    private fun copyToPrivateStorage(uri: Uri, fileName: String): Uri {
+        if (uri.scheme != "content") return uri
+        try {
+            val dir = java.io.File(context.filesDir, "videos")
+            dir.mkdirs()
+            val targetFile = java.io.File(dir, fileName)
+            if (targetFile.exists()) return Uri.fromFile(targetFile)
+
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            return Uri.fromFile(targetFile)
+        } catch (_: Exception) {
+            return uri  // fallback to original URI
         }
     }
 
